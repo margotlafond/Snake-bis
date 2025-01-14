@@ -6,6 +6,7 @@ import time
 
 import pygame
 
+from typing import Any
 # First party
 from .board import Board
 from .checkerboard import Checkerboard
@@ -83,6 +84,7 @@ class Game:
 
         #Best Scores
         self._scores = Scores.default(5)
+        self._new_high_score = None | Score
 
         # Create fruit
         Fruit.color = self._fruit_color
@@ -106,12 +108,17 @@ class Game:
             self._screen.blit(text_score, (x, y))
             y += 32
 
+    def _draw_input_name(self)-> None:
+        x, y = 80, 170
+        score = self._snake.score
+        text_gamer_name = self._fontscore.render(score.name.ljust(Score.MAX_LENGTH)+ f"{score.score:.>8}", True, pygame.Color("red"))
+        self._screen.blit(text_gamer_name, (x, y))
 
-    def _process_scores_event(self, event) -> None:
+    def _process_scores_event(self, event: Any) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             self._state = State.PLAY
 
-    def _process_play_event(self, event) -> None:
+    def _process_play_event(self, event: Any) -> None:
         # Key press
         if event.type == pygame.KEYDOWN:
             # Quit
@@ -125,6 +132,15 @@ class Game:
                 case pygame.K_RIGHT:
                     self._snake.dir = Dir.RIGHT
 
+    def _process_input_event(self, event: Any) -> None:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:  # Tap enter to validate
+                self._state = State.SCORES
+            elif event.key == pygame.K_BACKSPACE:  # Delete a typeface
+                self._new_high_score.name = self._new_high_score.name[-1]
+            else:
+                self._new_high_score.name += event.unicode  # Add the typed typeface
+
     def _process_events(self) -> None:
         """Process pygame events."""
         # Loop on all events
@@ -135,6 +151,8 @@ class Game:
                     self._process_scores_event(event)
                 case State.PLAY:
                     self._process_play_event(event)
+                case State.INPUT_NAME:
+                    self._process_input_event(event)
 
 
             # Closing window (Mouse click on cross icon or OS keyboard shortcut)
@@ -145,8 +163,8 @@ class Game:
                 match event.key:
                     case pygame.K_q:
                         self._state = State.QUIT
-            
-    
+
+
     def start(self) -> None:
         """Start the game."""
         # Initialize pygame
@@ -185,10 +203,12 @@ class Game:
                         score = self._snake.score
                         self._reset_snake()
                         if self._scores.is_high_score(score):
+                            self._new_high_score = Score(name = "", score = score)
+                            self._scores.add_score(self._new_high_score)
                             self._state = State.INPUT_NAME
                         else:
                             self._state = State.SCORES
-                case State.SCORES:
+                case State.SCORES | State.INPUT_NAME:
                     self._draw_scores()
 
             # Display

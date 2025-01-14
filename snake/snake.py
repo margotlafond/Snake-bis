@@ -49,6 +49,10 @@ class Snake(GameObject):
     def dir(self, direction: Dir) -> None:
         self._dir = direction
 
+    @property
+    def score(self)-> int:
+        return self._length-3
+
     def notify_out_of_board(self, width: int, height: int) -> None:
         """Snake has exited the board."""
         if self._gameover_on_exit:
