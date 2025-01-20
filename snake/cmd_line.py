@@ -72,6 +72,10 @@ def read_args() -> argparse.Namespace:
     parser.add_argument("--fps", type = int, default = DEFAULT_FPS,
                         help="Set the number of frames per second."
                         f" Must be between {MIN_FPS} and {MAX_FPS}.")
+    
+    # Scores
+    parser.add_argument("--scores-file", type = str, default = "snake_scores.yml",
+                        help="Path of the file which registers the scores.")
 
     # Parse
     args = parser.parse_args()

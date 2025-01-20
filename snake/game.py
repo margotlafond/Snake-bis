@@ -3,23 +3,26 @@
 # Third party
 import importlib.resources
 import time
+from pathlib import Path
+from typing import Any
 
 import pygame
+import yaml
 
-from typing import Any
 # First party
 from .board import Board
 from .checkerboard import Checkerboard
 from .dir import Dir
 from .exceptions import GameOver
 from .fruit import Fruit
+from .score import Score
+from .scores import Scores
 from .snake import Snake
 from .state import State
-from .scores import Scores
-from .score import Score
 
 # Constants
 SK_START_LENGTH = 3
+MAX_SCORES = 5
 
 class Game:
     """The main class of the game."""
@@ -31,17 +34,24 @@ class Game:
                  snake_head_color: pygame.Color,
                  snake_body_color: pygame.Color,
                  gameover_on_exit: bool,
+                 scores_file: Path,
                  ) -> None:
         """Object initialization."""
         self._width = width
         self._height = height
         self._tile_size = tile_size
         self._fps = fps
+        self._gameover_on_exit = gameover_on_exit
+        self._snake = None
+
+        #Colors
         self._fruit_color = fruit_color
         self._snake_head_color = snake_head_color
         self._snake_body_color = snake_body_color
-        self._gameover_on_exit = gameover_on_exit
-        self._snake = None
+
+        #Scores
+        self._new_high_score = None
+        self._scores_file = scores_file
 
     def _reset_snake(self) -> None:
         if self._snake is not None:
@@ -83,8 +93,11 @@ class Game:
         self._reset_snake()
 
         #Best Scores
-        self._scores = Scores.default(5)
-        self._new_high_score = None | Score
+        if not(self._scores_file.exists()):
+            self._scores = Scores.default(MAX_SCORES)
+        else:
+            self._scores = yaml.safe_load(self._scores_file)
+        self._scores.save(self._scores_file)
 
         # Create fruit
         Fruit.color = self._fruit_color
@@ -108,12 +121,6 @@ class Game:
             self._screen.blit(text_score, (x, y))
             y += 32
 
-    def _draw_input_name(self)-> None:
-        x, y = 80, 170
-        score = self._snake.score
-        text_gamer_name = self._fontscore.render(score.name.ljust(Score.MAX_LENGTH)+ f"{score.score:.>8}", True, pygame.Color("red"))
-        self._screen.blit(text_gamer_name, (x, y))
-
     def _process_scores_event(self, event: Any) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             self._state = State.PLAY
@@ -136,7 +143,7 @@ class Game:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:  # Tap enter to validate
                 self._state = State.SCORES
-            elif event.key == pygame.K_BACKSPACE:  # Delete a typeface
+            elif event.key == pygame.K_BACKSPACE and len(self._new_high_score.name) >= 1:  # Delete a typeface  # noqa: E501
                 self._new_high_score.name = self._new_high_score.name[-1]
             else:
                 self._new_high_score.name += event.unicode  # Add the typed typeface
@@ -164,6 +171,10 @@ class Game:
                     case pygame.K_q:
                         self._state = State.QUIT
 
+    def _save_scores(self) -> None:
+        with open(self._scores_file) as f:
+            yaml.safe_dump(f, Loader=yaml.Loader)
+
 
     def start(self) -> None:
         """Start the game."""
@@ -190,7 +201,6 @@ class Game:
             except GameOver:
                 self._state = State.GAME_OVER
                 cpt = self._fps
-
 
 
             # Draw
